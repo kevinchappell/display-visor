@@ -1,5 +1,5 @@
 #!/bin/bash
-version="0.4"
+version="0.4.1"
 
 usage ()
 {
@@ -11,7 +11,7 @@ usage ()
 	-i, --i3	Test for i3wm instance.
                          For avoiding conflict with multiple environments.
 	-l, --lid	Check laptop lid status.
-                         Ignored/Assumed closed if not given. 
+                         Ignored/Assumed closed if not given.
                          It is possible to specify switch. Defaults to 'LID0'
                          If unsure, look under /proc/acpi/button/lid/...
 	-v, --version	Print version info.
@@ -103,29 +103,17 @@ config_closed_lid ()
 {
     if [ "$lidstatus" == "closed" ]; then
         echo "$prefix Laptop lid is closed"
-    elif [ -n "$LVDS1" -a -z "$lidtest" ]; then
+    elif [ -n "$eDP1" -a -z "$lidtest" ]; then
         echo "$prefix Laptop display will be ignored unless -l option is set"
     fi
-    if [ -n "$HDMI1" -a -n "$VGA1" ]; then
-        echo "$prefix SETTING: HDMI1 (Primary) - VGA1 (Right)"
-        xrandr --output LVDS1 --off \
-               --output HDMI1 --auto --primary \
-               --output VGA1 --auto --right-of HDMI1
-    elif [ -n "$HDMI1" -a -z "$VGA1" ]; then
-        echo "$prefix SETTING: HDMI1 (Primary)"
-        xrandr --output LVDS1 --off \
-               --output VGA1 --off \
-               --output HDMI1 --auto --primary
-    elif [ -z "$HDMI1" -a -n "$VGA1" ]; then
-        echo "$prefix SETTING: VGA1 (Primary)"
-        xrandr --output LVDS1 --off \
-               --output HDMI1 --off \
-               --output VGA1 --auto --primary
+    if [ -n "$DP1-2" ]; then
+        echo "$prefix SETTING: DP1-2 (Primary)"
+        xrandr --output eDP1 --off \
+               --output DP1-2 --auto --primary \
     else
         echo "$prefix No external monitors are plugged in"
-        xrandr --output HDMI1 --off \
-               --output VGA1 --off \
-               --output LVDS1 --auto --primary
+        xrandr --output DP1-2 --off \
+               --output eDP1 --auto --primary
     fi
 }
 
@@ -133,27 +121,14 @@ config_closed_lid ()
 config_open_lid ()
 {
     echo "$prefix Laptop lid is open"
-    if [ -n "$HDMI1" -a -n "$VGA1" ]; then
-        echo "$prefix SETTING: LVDS1 (Left) - HDMI1 (Primary) - VGA1 (Right)"
-        xrandr --output LVDS1 --off \
-               --output HDMI1 --auto --primary \
-               --output VGA1 --auto --right-of HDMI1
-    elif [ -n "$HDMI1" -a -z "$VGA1" ]; then
-        echo "$prefix HDMI1 is plugged in, but not VGA1"
-        echo "$prefix SETTING: LVDS1 (Primary) - HDMI1 (Right)"
-        xrandr --output VGA1 --off \
-               --output LVDS1 --auto --primary \
-               --output HDMI1 --auto --right-of LVDS1 --noprimary
-    elif [ -z "$HDMI1" -a -n "$VGA1" ]; then
-        echo "$prefix SETTING: LVDS1 (Primary) - VGA1 (Right)"
-        xrandr --output HDMI1 --off \
-               --output LVDS1 --auto --primary \
-               --output VGA1 --auto --right-of LVDS1 --noprimary
+    if [ -n "$DP1-2" ]; then
+        echo "$prefix SETTING: eDP1 (Left) - DP1-2 (Primary)"
+        xrandr --output eDP1 --auto --noprimary \
+               --output DP1-2 --mode 3440x1440 --auto --primary --right-of eDP1
     else
         echo "$prefix No external monitors are plugged in"
-        xrandr --output HDMI1 --off \
-               --output VGA1 --off \
-               --output LVDS1 --auto --primary
+        xrandr --output DP1-2 --off \
+               --output eDP1 --auto --primary
     fi
 }
 
@@ -161,6 +136,11 @@ configure_displays ()
 {
 
     handle_err
+
+    # refresh the lidstatus state
+    if [ "$lidtest" == "true" ]; then
+        lidstatus=$(cat /proc/acpi/button/lid/$lidswitch/state 2>/dev/null | awk '{print $NF}')
+    fi
 
     declare_outputs
 
@@ -209,5 +189,5 @@ trap "echo 'Received signal. Reconfiguring displays.' ; configure_displays" RTMI
 while :
 do
     sleep 60 &
-    wait 
+    wait
 done
