@@ -109,7 +109,7 @@ config_closed_lid ()
     if [ -n "$DP1-2" ]; then
         echo "$prefix SETTING: DP1-2 (Primary)"
         xrandr --output eDP1 --off \
-               --output DP1-2 --auto --primary \
+               --output DP1-2 --auto --primary
     else
         echo "$prefix No external monitors are plugged in"
         xrandr --output DP1-2 --off \
